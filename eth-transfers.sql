@@ -6,7 +6,7 @@ SELECT
     to_address as receiver,
     value as amount
 FROM `bigquery-public-data.crypto_ethereum.traces`
-WHERE value > 0 AND (
+WHERE status = 1 AND value > 0 AND (
     from_address IN (
         -- All Pools
         '0x61bb2fda13600c497272a8dd029313afdb125fd3',
