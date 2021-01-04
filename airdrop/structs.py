@@ -13,3 +13,4 @@ Price = namedtuple('Price', ['timestamp', 'price'])
 InchTxn = namedtuple('InchTxn', ['project', 'tx_from', 'to_token', 'from_token', 'to_amount', 'from_amount', 'tx_hash',
                                  'block_time', 'from_usd', 'to_usd'])
 Prices = namedtuple('Prices', ['usdc_prices', 'usdt_prices', 'dai_prices', 'eth_prices'])
+LimitOrdersUser = namedtuple('LimitOrdersUser', ['maker', 'trades', 'volume', 'first_trade'])

@@ -4,7 +4,7 @@ from airdrop.config import SEPT_15, ZERO_ADDR, USDC_ADDR, USDT_ADDR, DAI_ADDR
 from airdrop.structs import LPTransfer, TokenTransfer, Operation, Price
 
 
-def get_1inch_users(trades):
+def _get_1inch_users(trades):
     user_trades = dict()
 
     for t in trades:
@@ -24,19 +24,59 @@ def get_1inch_users(trades):
             'weight': int((sum(max(t.from_usd, t.to_usd) for t in ts) ** (2 / 3)) * 1000),
         }
 
-    filtered_users = {u: s for u, s in user_stats.items() if
+    return user_stats
+
+
+def get_all_users(trades, limit_order_users, relay_trades):
+    all_users = _get_1inch_users(trades)
+    for u in limit_order_users:
+        user = all_users.get(u.maker)
+        if user is None:
+            user = {
+                'volume': 0,
+                'count': 0,
+                'first_trade': 0xfffffffffffffff
+            }
+        user['volume'] += u.volume if u.volume is not None else 0
+        user['count'] += u.trades
+        user['first_trade'] = min(user['first_trade'], u.first_trade)
+        user['weight'] = int((user['volume'] ** (2 / 3)) * 1000)
+        all_users[u.maker] = user
+    
+    relay_users = _get_1inch_users(relay_trades)
+    for u, s in relay_users.items():
+        user = all_users.get(u)
+        if user is None:
+            user = {
+                'volume': 0,
+                'count': 0,
+                'first_trade': 0xfffffffffffffff
+            }
+        user['volume'] += s['volume']
+        user['count'] += s['count']
+        user['first_trade'] = min(user['first_trade'], s['first_trade'])
+        user['weight'] = int((user['volume'] ** (2 / 3)) * 1000)
+        all_users[u] = user
+    
+    filtered_users = {u: s for u, s in all_users.items() if
+                      s['first_trade'] <= SEPT_15 or s['volume'] >= 20 or s['count'] > 3}
+    return filtered_users
+    
+
+def get_1inch_users(trades):
+    filtered_users = {u: s for u, s in _get_1inch_users(trades).items() if
                       s['first_trade'] <= SEPT_15 or s['volume'] >= 20 or s['count'] > 3}
 
     return filtered_users
 
 
-def calculate_users_usdsec(all_events, tracked_token):
+def calculate_users_usdsec(all_events, tracked_token, start_timestamp):
     user_share = dict()
     user_usd_sec = dict()
     pool_total_supply = 0
     pool_total_tokens = 0
     prev_price = 0
-    last_processed_sec = 0
+    last_processed_sec = start_timestamp
 
     for op in all_events:
         if last_processed_sec < op.timestamp and prev_price > 0:
@@ -87,12 +127,14 @@ def calculate_users_usdsec(all_events, tracked_token):
             prev_price = op.price
         else:
             assert False
-        last_processed_sec = op.timestamp
+        
+        if last_processed_sec < op.timestamp:
+            last_processed_sec = op.timestamp
 
     return user_usd_sec
 
 
-def process_mining_program(lp_transfers, eth_transfers, token_transfers, prices, program_amount_total):
+def process_mining_program(lp_transfers, eth_transfers, token_transfers, prices, program_amount_total, program_start):
     pools = list(lp_transfers.keys())
 
     all_transfers = {
@@ -110,23 +152,23 @@ def process_mining_program(lp_transfers, eth_transfers, token_transfers, prices,
             if type(transfer).__name__ == TokenTransfer.__name__:
                 if transfer.token == USDC_ADDR:
                     tracked_token = USDC_ADDR
-                    selected_prices = prices.usdc
+                    selected_prices = prices.usdc_prices
                 elif transfer.token == USDT_ADDR:
                     tracked_token = USDT_ADDR
-                    selected_prices = prices.usdt
+                    selected_prices = prices.usdt_prices
                 elif transfer.token == DAI_ADDR:
                     tracked_token = DAI_ADDR
-                    selected_prices = prices.dai
+                    selected_prices = prices.dai_prices
                 elif transfer.token == ZERO_ADDR:
                     tracked_token = ZERO_ADDR
-                    selected_prices = prices.eth
+                    selected_prices = prices.eth_prices
                 else:
                     continue
                 break
         assert tracked_token is not None
         assert selected_prices is not None
         events = sorted(transfers + selected_prices, key=attrgetter('timestamp'))
-        user_usd_sec = calculate_users_usdsec(events, tracked_token)
+        user_usd_sec = calculate_users_usdsec(events, tracked_token, program_start)
         all_usd_sec[pool] = user_usd_sec
         print('processed', pool)
 

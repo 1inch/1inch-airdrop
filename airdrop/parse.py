@@ -3,11 +3,33 @@ import datetime
 import json
 
 from airdrop.config import STOP_TIMESTAMP, START_TIMESTAMP, ZERO_ADDR
-from airdrop.structs import InchTxn, LPTransfer, Price, TokenTransfer, Operation
+from airdrop.structs import InchTxn, LPTransfer, Price, TokenTransfer, Operation, LimitOrdersUser
 
 
-def get_1inch_trades():
-    with open('./data/dune-swaps.csv') as csvfile:
+def get_limit_users():
+    with open('./data/limit-orders.json') as in_f:
+        return [
+            LimitOrdersUser('0x' + row['maker_address'], row['trades'], row['volume'], datetime.datetime.strptime(row['ts'], "%Y-%m-%dT%H:%M:%SZ").timestamp())
+            for row in json.load(in_f)['query_result']['data']['rows']
+            if datetime.datetime.strptime(row['ts'], "%Y-%m-%dT%H:%M:%SZ").timestamp() <= STOP_TIMESTAMP
+        ]
+
+
+def get_relay_trades():
+    with open('./data/relays.csv') as csvfile:
+        spamreader = csv.reader(csvfile)
+        rows = [
+            InchTxn(row[0], '0x' + row[1], '0x' + row[2], '0x' + row[3], row[4], row[5], '0x' + row[6],
+                    datetime.datetime.strptime(row[7], "%Y-%m-%dT%H:%M:%SZ"), float(row[8] if row[8] else '0'),
+                    float(row[9] if row[9] else '0'))
+            for row in [row for row in spamreader][1:]
+        ]
+    
+    return [t for t in rows if t.block_time.timestamp() <= STOP_TIMESTAMP]
+
+
+def get_1inch_trades(filename):
+    with open(filename) as csvfile:
         spamreader = csv.reader(csvfile)
         rows = [
             InchTxn(row[0], '0x' + row[1], '0x' + row[2], '0x' + row[3], row[4], row[5], '0x' + row[6],
@@ -19,6 +41,7 @@ def get_1inch_trades():
     inch = []
     split = []
     router = []
+    mooniswap = []
 
     for r in rows:
         if r.project == '1inch':
@@ -27,6 +50,8 @@ def get_1inch_trades():
             split.append(r)
         elif r.project == '1proto':
             router.append(r)
+        elif r.project == 'mooniswap':
+            mooniswap.append(r)
         else:
             raise RuntimeError("Invalid project")
 
@@ -34,7 +59,7 @@ def get_1inch_trades():
 
     used_txns = set(r.tx_hash for r in trades)
 
-    for proj in [split, router]:
+    for proj in [split, router, mooniswap]:
         for r in proj:
             if r.tx_hash not in used_txns:
                 trades.append(r)
