@@ -14,3 +14,4 @@ InchTxn = namedtuple('InchTxn', ['project', 'tx_from', 'to_token', 'from_token',
                                  'block_time', 'from_usd', 'to_usd'])
 Prices = namedtuple('Prices', ['usdc_prices', 'usdt_prices', 'dai_prices', 'eth_prices'])
 LimitOrdersUser = namedtuple('LimitOrdersUser', ['maker', 'trades', 'volume', 'first_trade'])
+UniswapUser = namedtuple('UniswapUser', ['wallet', 'swaps', 'swaps2021'])

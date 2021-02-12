@@ -1,10 +1,11 @@
 import json
 
 from airdrop.config import FIRST_MINING_PROGRAM, SECOND_MINING_PROGRAM, FIX_REWARD, GITCOIN_REWARD, AIRDROP_PROGRAM, \
-    FIRST_MINING_PROGRAM_START, SECOND_MINING_PROGRAM_START
+    FIRST_MINING_PROGRAM_START, SECOND_MINING_PROGRAM_START, UNISWAP_AIRDROP_PROGRAM, UNISWAP_FIX_REWARD
 from airdrop.parse import get_usdc_prices, get_usdt_prices, get_dai_prices, get_eth_prices, get_lp_transfers, \
-    get_eth_transfers, get_token_transfers, get_1inch_trades, get_gitcoin_users, get_limit_users, get_relay_trades
-from airdrop.process import process_mining_program, get_1inch_users, get_all_users
+    get_eth_transfers, get_token_transfers, get_1inch_trades, get_gitcoin_users, get_limit_users, get_relay_trades, \
+    get_uniswap_users
+from airdrop.process import process_mining_program, get_1inch_users, get_all_users, process_uniswap_users
 from airdrop.structs import Prices
 
 
@@ -150,5 +151,20 @@ def gen_second_distribution():
             if u not in total_rewards:
                 total_rewards[u] = 0
             total_rewards[u] += r
+
+    total_inch_rewards = sum(total_rewards.values())
+
+    uniswap_users = process_uniswap_users(get_uniswap_users())
+    for u in total_rewards:
+        if u in uniswap_users:
+            del uniswap_users[u]
+    total_uniswap_weight = sum(uniswap_users.values())
+
+    uniswap_volume_reward = UNISWAP_AIRDROP_PROGRAM - UNISWAP_FIX_REWARD * len(uniswap_users)
+
+    for k, w in uniswap_users.items():
+        if k in total_rewards:
+            assert False
+        total_rewards[k] = UNISWAP_FIX_REWARD + uniswap_volume_reward * w // total_uniswap_weight
 
     return total_rewards

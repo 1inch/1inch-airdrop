@@ -190,3 +190,10 @@ def process_mining_program(lp_transfers, eth_transfers, token_transfers, prices,
     }
 
     return tokens
+
+
+def process_uniswap_users(uniswap_users):
+    return {
+        user.wallet: user.swaps2021 - 3
+        for user in uniswap_users
+    }

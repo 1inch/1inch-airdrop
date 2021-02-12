@@ -3,7 +3,16 @@ import datetime
 import json
 
 from airdrop.config import STOP_TIMESTAMP, START_TIMESTAMP, ZERO_ADDR
-from airdrop.structs import InchTxn, LPTransfer, Price, TokenTransfer, Operation, LimitOrdersUser
+from airdrop.structs import InchTxn, LPTransfer, Price, TokenTransfer, Operation, LimitOrdersUser, UniswapUser
+
+
+def get_uniswap_users():
+    with open('./data/uniswap.csv') as csvfile:
+        spamreader = csv.reader(csvfile)
+        return [
+            UniswapUser('0x' + row[0], int(row[1]), int(row[2]))
+            for row in [row for row in spamreader][1:]
+        ]
 
 
 def get_limit_users():
