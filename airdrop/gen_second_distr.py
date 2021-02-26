@@ -1,9 +1,9 @@
-from distribution import gen_second_distribution, print_distribution
+from distribution import gen_initial_distribution, gen_second_distribution, print_distribution
 
 
 def main():
     initial_distr = gen_initial_distribution()
-    second_distr = gen_second_distribution()
+    second_distr, _ = gen_second_distribution()
     updated_distr = {}
 
     for u, t in second_distr.items():

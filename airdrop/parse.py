@@ -37,15 +37,19 @@ def get_relay_trades():
     return [t for t in rows if t.block_time.timestamp() <= STOP_TIMESTAMP]
 
 
-def get_1inch_trades(filename):
-    with open(filename) as csvfile:
-        spamreader = csv.reader(csvfile)
-        rows = [
-            InchTxn(row[0], '0x' + row[1], '0x' + row[2], '0x' + row[3], row[4], row[5], '0x' + row[6],
-                    datetime.datetime.strptime(row[7], "%Y-%m-%dT%H:%M:%SZ"), float(row[8] if row[8] else '0'),
-                    float(row[9] if row[9] else '0'))
-            for row in [row for row in spamreader][1:]
-        ]
+def get_1inch_trades(filename, filename2=None):
+    rows = []
+    print(filename, filename2)
+    for f in [filename2, filename]:
+        if f is not None:
+            with open(f) as csvfile:
+                spamreader = csv.reader(csvfile)
+                rows.extend([
+                    InchTxn(row[0], '0x' + row[1], '0x' + row[2], '0x' + row[3], row[4], row[5], '0x' + row[6],
+                            datetime.datetime.strptime(row[7], "%Y-%m-%dT%H:%M:%SZ"), float(row[8] if row[8] else '0'),
+                            float(row[9] if row[9] else '0'))
+                    for row in [row for row in spamreader][1:]
+                ])
 
     inch = []
     split = []
@@ -60,6 +64,8 @@ def get_1inch_trades(filename):
         elif r.project == '1proto':
             router.append(r)
         elif r.project == 'mooniswap':
+            mooniswap.append(r)
+        elif r.project == 'mooniswap2':
             mooniswap.append(r)
         else:
             raise RuntimeError("Invalid project")
